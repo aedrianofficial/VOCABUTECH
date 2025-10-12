@@ -3,9 +3,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import { Link } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getRandomWord, initDatabase, setReviewFlag } from './utils/database';
+import { getAudioSource as getAudio, getImageSource as getImage } from './utils/mediaLoader';
 
 export default function Index() {
   const insets = useSafeAreaInsets();
@@ -19,6 +20,7 @@ export default function Index() {
     streaks: 0
   });
   const [lastActivity, setLastActivity] = useState('');
+  const [imageModalVisible, setImageModalVisible] = useState(false);
 
   useEffect(() => {
     initializeApp();
@@ -100,26 +102,6 @@ export default function Index() {
     }
   };
 
-  const getAudioSource = (audioPath: string) => {
-    // Extract filename from path (e.g., 'src/audio/abate.mp3' -> 'abate')
-    const filename = audioPath.split('/').pop()?.replace('.mp3', '');
-    
-    // Map of available audio files
-    const audioFiles: { [key: string]: any } = {
-      'abate': require('../src/audio/abate.mp3'),
-      'benevolent': require('../src/audio/benevolent.mp3'),
-      'candid': require('../src/audio/candid.mp3'),
-      'diligent': require('../src/audio/diligent.mp3'),
-      'eloquent': require('../src/audio/eloquent.mp3'),
-      'frugal': require('../src/audio/frugal.mp3'),
-      'gregarious': require('../src/audio/gregarious.mp3'),
-      'hypothesis': require('../src/audio/hypothesis.mp3'),
-      'impeccable': require('../src/audio/impeccable.mp3'),
-      'jovial': require('../src/audio/jovial.mp3'),
-    };
-
-    return audioFiles[filename || ''] || null;
-  };
 
   const playAudio = async () => {
     try {
@@ -128,8 +110,8 @@ export default function Index() {
         return;
       }
 
-      // Get audio source from database path
-      const audioSource = getAudioSource(dailyWord.audio);
+      // Get audio source from database path using centralized loader
+      const audioSource = getAudio(dailyWord.audio);
       
       if (!audioSource) {
         Alert.alert('Audio Not Found', `Audio file for "${dailyWord.word}" is not available`);
@@ -215,7 +197,7 @@ export default function Index() {
     <View style={styles.container}>
       {/* Fixed App Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <Text style={styles.headerTitle}>VocabUTech</Text>
+        <Text style={styles.headerTitle}>VOCABUtech</Text>
         <TouchableOpacity style={styles.profileIcon}>
           <Ionicons name="person-circle-outline" size={32} color="#2196F3" />
         </TouchableOpacity>
@@ -240,35 +222,28 @@ export default function Index() {
 
         {dailyWord?.image && (() => {
           try {
-            // Extract filename from path (e.g., 'src/image/abate.png' -> 'abate')
-            const filename = dailyWord.image.split('/').pop()?.replace('.png', '');
-            
-            // Map of available image files
-            const imageFiles: { [key: string]: any } = {
-              'abate': require('../src/images/abate.png'),
-              'benevolent': require('../src/images/benevolent.png'),
-              'candid': require('../src/images/candid.png'),
-              'diligent': require('../src/images/diligent.png'),
-              'eloquent': require('../src/images/eloquent.png'),
-              'frugal': require('../src/images/frugal.png'),
-              'gregarious': require('../src/images/gregarious.png'),
-              'hypothesis': require('../src/images/hypothesis.png'),
-              'impeccable': require('../src/images/impeccable.png'),
-              'jovial': require('../src/images/jovial.png'),
-            };
-
-            const imageSource = imageFiles[filename || ''];
+            // Get image source from database path using centralized loader
+            const imageSource = getImage(dailyWord.image);
             
             if (imageSource) {
               return (
-                <Image 
-                  source={imageSource} 
-                  style={styles.wordImage}
-                  resizeMode="cover"
-                  onError={() => {
-                    console.error(`Failed to load image for ${dailyWord.word}`);
-                  }}
-                />
+                <TouchableOpacity 
+                  onPress={() => setImageModalVisible(true)}
+                  activeOpacity={0.8}
+                >
+                  <Image 
+                    source={imageSource} 
+                    style={styles.wordImage}
+                    resizeMode="cover"
+                    onError={() => {
+                      console.error(`Failed to load image for ${dailyWord.word}`);
+                    }}
+                  />
+                  <View style={styles.imageOverlay}>
+                    <Ionicons name="expand-outline" size={24} color="#fff" />
+                    <Text style={styles.imageOverlayText}>Tap to view full image</Text>
+                  </View>
+                </TouchableOpacity>
               );
             } else {
               return (
@@ -338,6 +313,50 @@ export default function Index() {
         </Link>
       </View>
       </ScrollView>
+
+      {/* Full Screen Image Modal */}
+      <Modal
+        visible={imageModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setImageModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <TouchableOpacity 
+            style={styles.modalBackground}
+            activeOpacity={1}
+            onPress={() => setImageModalVisible(false)}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{dailyWord?.word}</Text>
+              <TouchableOpacity 
+                onPress={() => setImageModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close-circle" size={36} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            {dailyWord?.image && (() => {
+              const imageSource = getImage(dailyWord.image);
+              if (imageSource) {
+                return (
+                  <Image 
+                    source={imageSource} 
+                    style={styles.fullScreenImage}
+                    resizeMode="contain"
+                  />
+                );
+              }
+              return null;
+            })()}
+
+            <View style={styles.modalFooter}>
+              <Text style={styles.modalFooterText}>Tap anywhere to close</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -536,5 +555,67 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 14,
     color: '#999',
+  },
+  imageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    padding: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  imageOverlayText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+  },
+  modalBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalHeader: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    zIndex: 10,
+  },
+  modalTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#fff',
+    textTransform: 'capitalize',
+  },
+  closeButton: {
+    padding: 8,
+  },
+  fullScreenImage: {
+    width: '100%',
+    height: '70%',
+  },
+  modalFooter: {
+    position: 'absolute',
+    bottom: 50,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  modalFooterText: {
+    color: '#fff',
+    fontSize: 14,
+    opacity: 0.7,
   },
 });
