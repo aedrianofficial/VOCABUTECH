@@ -305,7 +305,7 @@ export default function Index() {
       <View style={styles.continueCard}>
         <Text style={styles.continueTitle}>Continue Learning</Text>
         <Text style={styles.continueText}>{lastActivity}</Text>
-        <Link href="/word_list" asChild>
+        <Link href="/wordlist" asChild>
           <TouchableOpacity style={styles.continueButton}>
             <Text style={styles.continueButtonText}>Resume</Text>
             <Ionicons name="arrow-forward" size={20} color="#fff" />
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContentContainer: {
-    paddingBottom: 80, // Space for bottom navigation
+    paddingBottom: 120, // Space for bottom navigation
   },
   headerTitle: {
     fontSize: 24,
