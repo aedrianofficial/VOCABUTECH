@@ -23,7 +23,7 @@ export default function BottomNav() {
     },
     {
       name: 'Words',
-      path: '/word_list',
+      path: '/wordlist',
       icon: 'list',
       iconType: 'ionicons' as const,
     },
@@ -48,7 +48,7 @@ export default function BottomNav() {
         {navItems.map((item) => {
           const active = isActive(item.path);
           return (
-            <Link key={item.path} href={item.path} asChild>
+            <Link key={item.path} href={item.path as any} asChild>
               <TouchableOpacity style={styles.navItem}>
                 {item.iconType === 'ionicons' ? (
                   <Ionicons
@@ -78,6 +78,10 @@ export default function BottomNav() {
 
 const styles = StyleSheet.create({
   container: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
