@@ -104,40 +104,25 @@ const WordDetails = () => {
   };
 
   const playAudio = async () => {
+    if (!word?.audio) {
+      Alert.alert('No Audio', 'Audio file not available for this word');
+      return;
+    }
+
     try {
-      if (!word?.audio) {
-        Alert.alert('No Audio', 'Audio file not available for this word');
-        return;
+      // Stop and unload any existing sound
+      if (sound) {
+        await sound.unloadAsync();
+        setSound(null);
+        setIsPlaying(false);
       }
 
       // Get audio source from database path using centralized loader
       const audioSource = getAudio(word.audio);
-      
+
       if (!audioSource) {
         Alert.alert('Audio Not Found', `Audio file for "${word.word}" is not available`);
         return;
-      }
-
-      // If audio is currently playing, stop and restart it
-      if (sound) {
-        try {
-          const status = await sound.getStatusAsync();
-          if (status.isLoaded) {
-            if (isPlaying) {
-              // Replay from beginning
-              await sound.stopAsync();
-              await sound.setPositionAsync(0);
-            }
-            await sound.playAsync();
-            setIsPlaying(true);
-            return;
-          }
-        } catch (error) {
-          // If there's an error with the existing sound, unload it
-          console.log('Unloading previous sound due to error');
-          await sound.unloadAsync();
-          setSound(null);
-        }
       }
 
       // Load and play new audio
@@ -145,7 +130,7 @@ const WordDetails = () => {
         audioSource,
         { shouldPlay: true }
       );
-      
+
       setSound(newSound);
       setIsPlaying(true);
 
