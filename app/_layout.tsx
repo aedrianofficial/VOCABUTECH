@@ -37,7 +37,7 @@ export default function RootLayout() {
             name="quiz/hard" 
             options={{ title: "Hard Quiz", headerShown: false }} 
           />
-          <Stack.Screen name="flash_card" options={{ title: "Flash Cards", headerShown: true, headerBackTitle: "Back" }} />
+          <Stack.Screen name="flash_card" options={{ title: "Flash Cards", headerShown: false }} />
           <Stack.Screen name="settings" options={{ title: "Settings", headerShown: true, headerBackTitle: "Back" }} />
         </Stack>
         <BottomNav />
