@@ -8,10 +8,15 @@ export default function BottomNav() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
 
+  // Hide bottom nav on loading and welcome screens
+  if (pathname === '/' || pathname === '/welcome') {
+    return null;
+  }
+
   const navItems = [
     {
       name: 'Home',
-      path: '/',
+      path: '/home',
       icon: 'home',
       iconType: 'ionicons' as const,
     },
@@ -36,8 +41,8 @@ export default function BottomNav() {
   ];
 
   const isActive = (path: string) => {
-    if (path === '/') {
-      return pathname === '/';
+    if (path === '/home') {
+      return pathname === '/home';
     }
     return pathname.startsWith(path);
   };

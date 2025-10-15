@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useProgress } from '../contexts/ProgressContext';
 import { getWordById, setReviewFlag, toggleFavorite } from '../utils/database';
 import { getAudioSource as getAudio, getImageSource as getImage } from '../utils/mediaLoader';
 
@@ -24,6 +25,7 @@ const WordDetails = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { incrementPoints } = useProgress();
   const [word, setWord] = useState<Word | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -104,16 +106,6 @@ const WordDetails = () => {
       await AsyncStorage.setItem(key, 'true');
     } catch (error) {
       console.error('Error marking points awarded:', error);
-    }
-  };
-
-  const incrementPoints = async (points: number) => {
-    try {
-      const currentPoints = await AsyncStorage.getItem('@VT_POINTS');
-      const newTotal = (currentPoints ? parseInt(currentPoints) : 0) + points;
-      await AsyncStorage.setItem('@VT_POINTS', newTotal.toString());
-    } catch (error) {
-      console.error('Error incrementing points:', error);
     }
   };
 

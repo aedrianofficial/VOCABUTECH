@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useProgress } from '../contexts/ProgressContext';
 import { getWordsByDifficulty } from '../utils/database';
 
 interface Word {
@@ -23,6 +24,7 @@ interface QuizQuestion {
 const HardQuiz = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { incrementPoints } = useProgress();
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -146,14 +148,8 @@ const HardQuiz = () => {
         setPointsEarned(prev => prev + points);
         setAnsweredWords(prev => new Set(prev).add(currentQuestion.word.id));
         
-        // Update total points in AsyncStorage
-        try {
-          const currentPoints = await AsyncStorage.getItem('@VT_POINTS');
-          const newTotal = (currentPoints ? parseInt(currentPoints) : 0) + points;
-          await AsyncStorage.setItem('@VT_POINTS', newTotal.toString());
-        } catch (error) {
-          console.error('Error updating points:', error);
-        }
+        // Update total points using global context (triggers level-up popup)
+        await incrementPoints(points);
       }
     }
   };

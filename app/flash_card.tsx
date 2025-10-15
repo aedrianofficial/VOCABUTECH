@@ -17,6 +17,7 @@ import {
     View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useProgress } from './contexts/ProgressContext';
 import { getAllWords, getWordsByDifficulty, setReviewFlag, toggleFavorite } from './utils/database';
 import { getAudioSource, getImageSource } from './utils/mediaLoader';
 
@@ -39,6 +40,7 @@ const CARD_HEIGHT = SCREEN_HEIGHT * 0.55;
 const FlashCard = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { incrementPoints } = useProgress();
   
   // State management
   const [words, setWords] = useState<Word[]>([]);
@@ -290,9 +292,8 @@ const FlashCard = () => {
           const bonusPoints = 10;
           setSessionPoints(prev => prev + bonusPoints);
           
-          const currentPoints = await AsyncStorage.getItem('@VT_POINTS');
-          const newTotal = (currentPoints ? parseInt(currentPoints) : 0) + bonusPoints;
-          await AsyncStorage.setItem('@VT_POINTS', newTotal.toString());
+          // Update total points using global context (triggers level-up popup)
+          await incrementPoints(bonusPoints);
           await markPointsAwarded(currentWord.id, 'learned');
         }
         
