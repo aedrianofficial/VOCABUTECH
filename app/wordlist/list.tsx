@@ -62,41 +62,65 @@ const WordListPage = () => {
     }
   };
 
-  const renderWord = ({ item }: { item: Word }) => (
-    <TouchableOpacity
-      style={styles.wordCard}
-      onPress={() => handleWordPress(item.id)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.wordHeader}>
-        <Text style={styles.wordText}>{item.word}</Text>
-        <View style={styles.badges}>
-          {item.favorite === 1 && (
-            <Ionicons name="heart" size={20} color="#F44336" />
-          )}
-          {item.reviewFlag === 1 && (
-            <Ionicons name="flag" size={20} color="#FF9800" />
-          )}
+  const getStatusBadge = (item: Word) => {
+    if (item.reviewFlag === 2) {
+      return { icon: 'checkmark-circle', color: '#4CAF50', text: 'Learned' };
+    } else if (item.reviewFlag === 1) {
+      return { icon: 'flag', color: '#FF9800', text: 'Review' };
+    }
+    return null;
+  };
+
+  const renderWord = ({ item }: { item: Word }) => {
+    const statusBadge = getStatusBadge(item);
+    
+    return (
+      <TouchableOpacity
+        style={[
+          styles.wordCard,
+          item.reviewFlag === 2 && styles.wordCardLearned,
+          item.reviewFlag === 1 && styles.wordCardReview,
+        ]}
+        onPress={() => handleWordPress(item.id)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.wordHeader}>
+          <Text style={styles.wordText}>{item.word}</Text>
+          <View style={styles.badges}>
+            {item.favorite === 1 && (
+              <View style={styles.badge}>
+                <Ionicons name="heart" size={18} color="#F44336" />
+              </View>
+            )}
+            {statusBadge && (
+              <View style={[styles.statusBadge, { backgroundColor: statusBadge.color + '20' }]}>
+                <Ionicons name={statusBadge.icon as any} size={16} color={statusBadge.color} />
+                <Text style={[styles.statusBadgeText, { color: statusBadge.color }]}>
+                  {statusBadge.text}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
-      </View>
-      <Text style={styles.meaningText} numberOfLines={2}>
-        {item.meaning}
-      </Text>
-      {item.example && (
-        <Text style={styles.exampleText} numberOfLines={1}>
-          "{item.example}"
+        <Text style={styles.meaningText} numberOfLines={2}>
+          {item.meaning}
         </Text>
-      )}
-      <View style={styles.footer}>
-        <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor() + '20' }]}>
-          <Text style={[styles.difficultyText, { color: getDifficultyColor() }]}>
-            {difficulty?.toUpperCase()}
+        {item.example && (
+          <Text style={styles.exampleText} numberOfLines={1}>
+            "{item.example}"
           </Text>
+        )}
+        <View style={styles.footer}>
+          <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor() + '20' }]}>
+            <Text style={[styles.difficultyText, { color: getDifficultyColor() }]}>
+              {difficulty?.toUpperCase()}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#999" />
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
@@ -192,6 +216,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    borderLeftWidth: 4,
+    borderLeftColor: 'transparent',
+  },
+  wordCardLearned: {
+    borderLeftColor: '#4CAF50',
+    backgroundColor: '#F1F8F4',
+  },
+  wordCardReview: {
+    borderLeftColor: '#FF9800',
+    backgroundColor: '#FFF9F0',
   },
   wordHeader: {
     flexDirection: 'row',
@@ -208,6 +242,22 @@ const styles = StyleSheet.create({
   badges: {
     flexDirection: 'row',
     gap: 8,
+    alignItems: 'center',
+  },
+  badge: {
+    padding: 4,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   meaningText: {
     fontSize: 16,

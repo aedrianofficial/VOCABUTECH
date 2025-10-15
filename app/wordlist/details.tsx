@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -27,6 +28,7 @@ const WordDetails = () => {
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isReview, setIsReview] = useState(false);
+  const [isLearned, setIsLearned] = useState(false);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [imageModalVisible, setImageModalVisible] = useState(false);
@@ -51,7 +53,13 @@ const WordDetails = () => {
       if (wordData) {
         setWord(wordData);
         setIsFavorite(wordData.favorite === 1);
+        
+        // reviewFlag values:
+        // 0 = Not Started
+        // 1 = In Review
+        // 2 = Learned
         setIsReview(wordData.reviewFlag === 1);
+        setIsLearned(wordData.reviewFlag === 2);
       } else {
         Alert.alert('Error', 'Word not found');
         router.back();
@@ -79,27 +87,101 @@ const WordDetails = () => {
     }
   };
 
-  const handleAddToReview = async () => {
+  const checkIfPointsAwarded = async (wordId: number, action: 'review' | 'learned'): Promise<boolean> => {
     try {
-      if (!word) return;
-      await setReviewFlag(word.id, 1);
-      setIsReview(true);
-      Alert.alert('Success', 'Added to review list!');
+      const key = `@VT_POINTS_AWARDED_${wordId}_${action}`;
+      const awarded = await AsyncStorage.getItem(key);
+      return awarded === 'true';
     } catch (error) {
-      console.error('Error adding to review:', error);
-      Alert.alert('Error', 'Failed to add to review list');
+      console.error('Error checking points awarded:', error);
+      return false;
     }
   };
 
-  const handleMarkAsLearned = async () => {
+  const markPointsAwarded = async (wordId: number, action: 'review' | 'learned') => {
+    try {
+      const key = `@VT_POINTS_AWARDED_${wordId}_${action}`;
+      await AsyncStorage.setItem(key, 'true');
+    } catch (error) {
+      console.error('Error marking points awarded:', error);
+    }
+  };
+
+  const incrementPoints = async (points: number) => {
+    try {
+      const currentPoints = await AsyncStorage.getItem('@VT_POINTS');
+      const newTotal = (currentPoints ? parseInt(currentPoints) : 0) + points;
+      await AsyncStorage.setItem('@VT_POINTS', newTotal.toString());
+    } catch (error) {
+      console.error('Error incrementing points:', error);
+    }
+  };
+
+  const handleToggleReview = async () => {
     try {
       if (!word) return;
-      await setReviewFlag(word.id, 0);
-      setIsReview(false);
-      Alert.alert('Success', 'Marked as learned!');
+      
+      if (isReview) {
+        // Remove from review list
+        await setReviewFlag(word.id, 0);
+        setIsReview(false);
+        Alert.alert('Removed', 'Word removed from review list.');
+      } else {
+        // Add to review list
+        const alreadyAwarded = await checkIfPointsAwarded(word.id, 'review');
+        
+        await setReviewFlag(word.id, 1);
+        setIsReview(true);
+        
+        // Save last reviewed word for Continue Learning feature
+        await AsyncStorage.setItem('@VT_LAST_ACTIVITY', `Added to Review: ${word.word}`);
+        await AsyncStorage.setItem('@VT_LAST_REVIEWED_WORD_ID', word.id.toString());
+        
+        if (!alreadyAwarded) {
+          await incrementPoints(5);
+          await markPointsAwarded(word.id, 'review');
+          Alert.alert('Success', 'Added to review list! +5 points');
+        } else {
+          Alert.alert('Added', 'Word added to review list.');
+        }
+      }
     } catch (error) {
-      console.error('Error marking as learned:', error);
-      Alert.alert('Error', 'Failed to mark as learned');
+      console.error('Error toggling review:', error);
+      Alert.alert('Error', 'Failed to update review status');
+    }
+  };
+
+  const handleToggleLearned = async () => {
+    try {
+      if (!word) return;
+      
+      if (isLearned) {
+        // Unmark as learned (set to review)
+        await setReviewFlag(word.id, 1);
+        setIsLearned(false);
+        setIsReview(true);
+        Alert.alert('Updated', 'Word moved back to review list.');
+      } else {
+        // Mark as learned
+        const alreadyAwarded = await checkIfPointsAwarded(word.id, 'learned');
+        
+        await setReviewFlag(word.id, 2);
+        setIsLearned(true);
+        setIsReview(false);
+        
+        if (!alreadyAwarded) {
+          await incrementPoints(10);
+          await markPointsAwarded(word.id, 'learned');
+          await AsyncStorage.setItem('@VT_LAST_ACTIVITY', `Learned: ${word.word}`);
+          Alert.alert('Success', 'Marked as learned! +10 points');
+        } else {
+          await AsyncStorage.setItem('@VT_LAST_ACTIVITY', `Learned: ${word.word}`);
+          Alert.alert('Updated', 'Word marked as learned.');
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling learned:', error);
+      Alert.alert('Error', 'Failed to update learned status');
     }
   };
 
@@ -290,35 +372,55 @@ const WordDetails = () => {
           </View>
           <View style={styles.statusItem}>
             <Ionicons
-              name={isReview ? 'flag' : 'flag-outline'}
+              name={isLearned ? 'checkmark-circle' : isReview ? 'flag' : 'school-outline'}
               size={20}
-              color={isReview ? '#FF9800' : '#999'}
+              color={isLearned ? '#4CAF50' : isReview ? '#FF9800' : '#999'}
             />
             <Text style={styles.statusText}>
-              {isReview ? 'Needs review' : 'Learned'}
+              {isLearned ? 'Learned ✓' : isReview ? 'In Review' : 'Not Started'}
             </Text>
           </View>
         </View>
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          {!isReview ? (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.reviewButton]}
-              onPress={handleAddToReview}
-            >
-              <Ionicons name="flag" size={20} color="#fff" />
-              <Text style={styles.actionButtonText}>Add to Review</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.learnedButton]}
-              onPress={handleMarkAsLearned}
-            >
-              <Ionicons name="checkmark-circle" size={20} color="#fff" />
-              <Text style={styles.actionButtonText}>Mark as Learned</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[
+              styles.actionButton, 
+              isReview ? styles.reviewButtonActive : styles.reviewButton
+            ]}
+            onPress={handleToggleReview}
+            disabled={isLearned}
+          >
+            <Ionicons 
+              name={isReview ? "flag" : "flag-outline"} 
+              size={20} 
+              color={isLearned ? "#ccc" : "#fff"} 
+            />
+            <Text style={[
+              styles.actionButtonText,
+              isLearned && styles.actionButtonTextDisabled
+            ]}>
+              {isReview ? 'Remove from Review' : 'Add to Review'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              isLearned ? styles.learnedButtonActive : styles.learnedButton
+            ]}
+            onPress={handleToggleLearned}
+          >
+            <Ionicons 
+              name={isLearned ? "checkmark-circle" : "checkmark-circle-outline"} 
+              size={20} 
+              color="#fff" 
+            />
+            <Text style={styles.actionButtonText}>
+              {isLearned ? 'Unmark as Learned' : 'Mark as Learned'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -527,13 +629,26 @@ const styles = StyleSheet.create({
   reviewButton: {
     backgroundColor: '#FF9800',
   },
+  reviewButtonActive: {
+    backgroundColor: '#F57C00',
+    borderWidth: 2,
+    borderColor: '#FF9800',
+  },
   learnedButton: {
     backgroundColor: '#4CAF50',
+  },
+  learnedButtonActive: {
+    backgroundColor: '#388E3C',
+    borderWidth: 2,
+    borderColor: '#4CAF50',
   },
   actionButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  actionButtonTextDisabled: {
+    color: '#ccc',
   },
   centerContainer: {
     flex: 1,

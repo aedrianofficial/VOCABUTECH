@@ -173,17 +173,6 @@ const MediumQuiz = () => {
     // Save quiz attempt to history
     await saveQuizAttempt(correctAnswers, questions.length, pointsEarned);
 
-    // Update streak if perfect score
-    if (correctAnswers === questions.length) {
-      try {
-        const currentStreak = await AsyncStorage.getItem('@VT_STREAKS');
-        const newStreak = (currentStreak ? parseInt(currentStreak) : 0) + 1;
-        await AsyncStorage.setItem('@VT_STREAKS', newStreak.toString());
-      } catch (error) {
-        console.error('Error updating streak:', error);
-      }
-    }
-
     // Update last activity
     try {
       await AsyncStorage.setItem('@VT_LAST_ACTIVITY', `Completed Medium Quiz (Attempt #${attemptNumber}): ${correctAnswers}/${questions.length} correct`);
