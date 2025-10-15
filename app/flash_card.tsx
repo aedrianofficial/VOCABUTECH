@@ -4,17 +4,17 @@ import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Animated,
-  Dimensions,
-  Image,
-  Modal,
-  PanResponder,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Animated,
+    Dimensions,
+    Image,
+    Modal,
+    PanResponder,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getAllWords, getWordsByDifficulty, setReviewFlag, toggleFavorite } from './utils/database';
@@ -129,6 +129,14 @@ const FlashCard = () => {
       const shuffled = fetchedWords.sort(() => Math.random() - 0.5);
       setWords(shuffled);
 
+      // Load learned words from database (reviewFlag === 2)
+      const learnedWordIds = new Set(
+        fetchedWords
+          .filter(word => word.reviewFlag === 2)
+          .map(word => word.id)
+      );
+      setLearnedWords(learnedWordIds);
+
       const savedIndex = await AsyncStorage.getItem('@VT_FC_LAST_INDEX');
       if (savedIndex && parseInt(savedIndex) < shuffled.length) {
         setCurrentIndex(parseInt(savedIndex));
@@ -144,11 +152,6 @@ const FlashCard = () => {
 
   const loadSessionData = async () => {
     try {
-      const learnedJson = await AsyncStorage.getItem('@VT_FC_LEARNED');
-      if (learnedJson) {
-        setLearnedWords(new Set(JSON.parse(learnedJson)));
-      }
-
       const points = await AsyncStorage.getItem('@VT_FC_SESSION_POINTS');
       if (points) {
         setSessionPoints(parseInt(points));
@@ -161,7 +164,6 @@ const FlashCard = () => {
   const saveSessionData = async () => {
     try {
       await AsyncStorage.setItem('@VT_FC_LAST_INDEX', currentIndex.toString());
-      await AsyncStorage.setItem('@VT_FC_LEARNED', JSON.stringify(Array.from(learnedWords)));
       await AsyncStorage.setItem('@VT_FC_SESSION_POINTS', sessionPoints.toString());
     } catch (error) {
       console.error('Error saving session data:', error);
@@ -170,7 +172,7 @@ const FlashCard = () => {
 
   useEffect(() => {
     saveSessionData();
-  }, [currentIndex, learnedWords, sessionPoints]);
+  }, [currentIndex, sessionPoints]);
 
   const handleFlip = () => {
     Animated.timing(flipAnim, {
@@ -249,6 +251,26 @@ const FlashCard = () => {
     }
   };
 
+  const checkIfPointsAwarded = async (wordId: number, action: 'learned'): Promise<boolean> => {
+    try {
+      const key = `@VT_POINTS_AWARDED_${wordId}_${action}`;
+      const awarded = await AsyncStorage.getItem(key);
+      return awarded === 'true';
+    } catch (error) {
+      console.error('Error checking points awarded:', error);
+      return false;
+    }
+  };
+
+  const markPointsAwarded = async (wordId: number, action: 'learned') => {
+    try {
+      const key = `@VT_POINTS_AWARDED_${wordId}_${action}`;
+      await AsyncStorage.setItem(key, 'true');
+    } catch (error) {
+      console.error('Error marking points awarded:', error);
+    }
+  };
+
   const handleToggleLearned = async () => {
     if (!currentWord) return;
 
@@ -259,14 +281,21 @@ const FlashCard = () => {
       await setReviewFlag(currentWord.id, newLearnedState ? 2 : 0);
       
       if (newLearnedState) {
+        // Check if points were already awarded for this word
+        const alreadyAwarded = await checkIfPointsAwarded(currentWord.id, 'learned');
+        
         setLearnedWords(prev => new Set(prev).add(currentWord.id));
         
-        const bonusPoints = 10;
-        setSessionPoints(prev => prev + bonusPoints);
+        if (!alreadyAwarded) {
+          const bonusPoints = 10;
+          setSessionPoints(prev => prev + bonusPoints);
+          
+          const currentPoints = await AsyncStorage.getItem('@VT_POINTS');
+          const newTotal = (currentPoints ? parseInt(currentPoints) : 0) + bonusPoints;
+          await AsyncStorage.setItem('@VT_POINTS', newTotal.toString());
+          await markPointsAwarded(currentWord.id, 'learned');
+        }
         
-        const currentPoints = await AsyncStorage.getItem('@VT_POINTS');
-        const newTotal = (currentPoints ? parseInt(currentPoints) : 0) + bonusPoints;
-        await AsyncStorage.setItem('@VT_POINTS', newTotal.toString());
         await AsyncStorage.setItem('@VT_LAST_ACTIVITY', `Learned: ${currentWord.word}`);
       } else {
         setLearnedWords(prev => {
@@ -274,6 +303,8 @@ const FlashCard = () => {
           newSet.delete(currentWord.id);
           return newSet;
         });
+        // Note: We don't remove points when unmarking as learned
+        // Points awarded are permanent once earned
       }
     } catch (error) {
       console.error('Error toggling learned:', error);
