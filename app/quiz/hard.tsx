@@ -85,9 +85,8 @@ const HardQuiz = () => {
         return;
       }
 
-      // Shuffle and take up to 10 words for better randomization
-      const shuffled = words.sort(() => Math.random() - 0.5);
-      const quizWords = shuffled.slice(0, Math.min(10, shuffled.length));
+      // Shuffle all words for randomization
+      const quizWords = words.sort(() => Math.random() - 0.5);
       
       // Generate questions with multiple choice options
       const generatedQuestions = quizWords.map((word: Word) => 
@@ -276,13 +275,6 @@ const HardQuiz = () => {
             <Text style={styles.questionLabel}>What word matches this meaning?</Text>
           </View>
           <Text style={styles.questionText}>{currentQuestion.word.meaning}</Text>
-          
-          {currentQuestion.word.example && (
-            <View style={styles.exampleContainer}>
-              <Ionicons name="chatbox-ellipses-outline" size={18} color="#999" />
-              <Text style={styles.exampleText}>"{currentQuestion.word.example}"</Text>
-            </View>
-          )}
         </View>
 
         {/* Options */}
@@ -527,21 +519,6 @@ const styles = StyleSheet.create({
     color: '#333',
     lineHeight: 26,
     marginBottom: 12,
-  },
-  exampleContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-  },
-  exampleText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#999',
-    fontStyle: 'italic',
-    lineHeight: 20,
   },
   optionsContainer: {
     gap: 12,
