@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "VocabUTech",
-    "slug": "VocabUTech",
+    "name": "VOCABUtech",
+    "slug": "VOCABUtech",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo.jpg",
     "scheme": "vocabutech",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -19,7 +19,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.mushroomlearner.vocabutech"
     },
     "web": {
       "output": "static",
@@ -44,6 +45,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6725c133-d4b6-40fb-8911-c2bbb3822314"
+      }
     }
   }
 }
